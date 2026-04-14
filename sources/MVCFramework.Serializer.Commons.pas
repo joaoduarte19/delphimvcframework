@@ -224,6 +224,8 @@ type
     constructor Create;
   end;
 
+  TMVCBase64StringEncoding = class;
+
   /// <summary>
   ///  Use this attribute in the model class to define a field of type TGuid if at the time of attribute serialization the value
   ///  of the guid field will be obtained without braces.
@@ -233,8 +235,12 @@ type
 
   TMVCSerializerHelper = record
   private
+    class var FBase64Encoder: TMVCBase64StringEncoding;
     { private declarations }
   public
+    class constructor Create;
+    class destructor Destroy;
+
     class function ApplyNameCase(NameCase: TMVCNameCase; const Value: string): string; static; inline;
     class function ApplyGuidSerialization(AGuidSerialization: TMVCGuidSerializationType; const AValue: TGuid): string; static; inline;
     class function GetKeyName(const AField: TRttiField; const AType: TRttiType): string; overload; static;
@@ -430,6 +436,11 @@ type
       const ASerializationAction: TMVCSerializationAction = nil);
     procedure JsonObjectToObject(const AJsonObject: TJDOJsonObject; const AObject: TObject;
       const AType: TMVCSerializationType; const AIgnoredAttributes: TMVCIgnoredList);
+  end;
+
+  TMVCBase64StringEncoding = class(TBase64Encoding)
+  public
+    constructor Create; override;
   end;
 
 var
@@ -655,6 +666,11 @@ begin
   end;
 end;
 
+class destructor TMVCSerializerHelper.Destroy;
+begin
+  FBase64Encoder.Free;
+end;
+
 class function TMVCSerializerHelper.GetKeyName(const AField: TRttiField;
   const AType: TRttiType): string;
 var
@@ -800,6 +816,11 @@ begin
       [AObjectType.ToString]);
 end;
 
+class constructor TMVCSerializerHelper.Create;
+begin
+  FBase64Encoder := TMVCBase64StringEncoding.Create;
+end;
+
 class function TMVCSerializerHelper.CreateObject(const AQualifiedClassName: string): TObject;
 var
   Context: TRttiContext;
@@ -824,21 +845,23 @@ end;
 
 class procedure TMVCSerializerHelper.DecodeStream(AInput, AOutput: TStream);
 begin
+  FBase64Encoder.Decode(AInput, AOutput);
 
-{$IFDEF SYSTEMNETENCODING}
-{$IFDEF ALEXANDRIAORBETTER}
-  TNetEncoding.Base64String.Decode(AInput, AOutput);
-{$ELSE}
-  TNetEncoding.Base64.Decode(AInput, AOutput);
-{$ENDIF}
-{$ELSE}
-  Soap.EncdDecd.DecodeStream(AInput, AOutput);
-
-{$ENDIF}
+//{$IFDEF SYSTEMNETENCODING}
+//{$IFDEF ALEXANDRIAORBETTER}
+//  TNetEncoding.Base64String.Decode(AInput, AOutput);
+//{$ELSE}
+//  TNetEncoding.Base64.Decode(AInput, AOutput);
+//{$ENDIF}
+//{$ELSE}
+//  Soap.EncdDecd.DecodeStream(AInput, AOutput);
+//
+//{$ENDIF}
 end;
 
 class function TMVCSerializerHelper.DecodeString(const AInput: string): string;
 begin
+  Result := FBase64Encoder.Decode(AInput);
 
 {$IFDEF SYSTEMNETENCODING}
 {$IFDEF ALEXANDRIAORBETTER}
@@ -853,32 +876,35 @@ end;
 
 class procedure TMVCSerializerHelper.EncodeStream(AInput, AOutput: TStream);
 begin
+  FBase64Encoder.Encode(AInput, AOutput);
 
-{$IFDEF SYSTEMNETENCODING}
-{$IFDEF ALEXANDRIAORBETTER}
-  TNetEncoding.Base64String.Encode(AInput, AOutput);
-{$ELSE}
-  TNetEncoding.Base64.Encode(AInput, AOutput);
-{$ENDIF}
-{$ELSE}
-  Soap.EncdDecd.EncodeStream(AInput, AOutput);
 
-{$ENDIF}
+//{$IFDEF SYSTEMNETENCODING}
+//{$IFDEF ALEXANDRIAORBETTER}
+//  TNetEncoding.Base64String.Encode(AInput, AOutput);
+//{$ELSE}
+//  TNetEncoding.Base64.Encode(AInput, AOutput);
+//{$ENDIF}
+//{$ELSE}
+//  Soap.EncdDecd.EncodeStream(AInput, AOutput);
+//
+//{$ENDIF}
 end;
 
 class function TMVCSerializerHelper.EncodeString(const AInput: string): string;
 begin
+  Result := FBase64Encoder.Encode(AInput);
 
-{$IFDEF SYSTEMNETENCODING}
-{$IFDEF ALEXANDRIAORBETTER}
-  Result := TNetEncoding.Base64String.Encode(AInput);
-{$ELSE}
-  Result := TNetEncoding.Base64.Encode(AInput);
-{$ENDIF}
-{$ELSE}
-  Result := Soap.EncdDecd.EncodeString(AInput);
-
-{$ENDIF}
+//{$IFDEF SYSTEMNETENCODING}
+//{$IFDEF ALEXANDRIAORBETTER}
+//  Result := TNetEncoding.Base64String.Encode(AInput);
+//{$ELSE}
+//  Result := TNetEncoding.Base64.Encode(AInput);
+//{$ENDIF}
+//{$ELSE}
+//  Result := Soap.EncdDecd.EncodeString(AInput);
+//
+//{$ENDIF}
 end;
 
 class function TMVCSerializerHelper.GetKeyName(const AProperty: TRttiProperty;
@@ -2028,6 +2054,13 @@ end;
 constructor MVCGuidSerializationBracesAttribute.Create;
 begin
   inherited Create(gstBraces);
+end;
+
+{ TMVCBase64StringEncoding }
+
+constructor TMVCBase64StringEncoding.Create;
+begin
+  inherited Create(0, '');
 end;
 
 initialization
